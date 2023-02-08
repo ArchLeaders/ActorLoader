@@ -10,13 +10,13 @@ if (args.Length > 0) {
     foreach (var arg in args[1..]) {
         string argName = arg.ToLower().Replace("-", string.Empty);
         if (argName == nameof(auto)) {
-            throw new NotSupportedException("Automatic diffing is not support ed yet");
+            auto = true;
         }
     }
 }
 
 // Initialize the ModFolder
 ModFolder folder = new(path, auto);
-folder.Compute();
+await folder.Compute();
 
 Console.WriteLine("Task completed succefully!");
