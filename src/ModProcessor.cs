@@ -8,7 +8,6 @@ public class ModProcessor
 {
 	private readonly string _path;
 	private readonly bool _auto;
-	private readonly bool _parallel;
 
 	private readonly string _actorsPath;
 	private readonly BymlFile _actorInfo;
@@ -48,29 +47,14 @@ public class ModProcessor
 	private async Task IterateFolders(string path)
 	{
 		await IterateFiles(path);
-
-		IEnumerable<string> iter = Directory.EnumerateDirectories(path);
-        if (_parallel) {
-			await Parallel.ForEachAsync(iter, async (folder, cancellationToken) => await IterateFolders(folder));
-		}
-		else {
-			foreach (var folder in iter) {
-				await IterateFolders(folder);
-			}
-		}
+        await Parallel.ForEachAsync(Directory.EnumerateDirectories(path), async (folder, cancellationToken)
+			=> await IterateFolders(folder));
 	}
 
 	private async Task IterateFiles(string path)
 	{
-		IEnumerable<string> iter = Directory.EnumerateFiles(path, "*.smubin");
-        if (_parallel) {
-			await Parallel.ForEachAsync(iter, async (file, cancellationToken) => await ProcessMubin(file));
-		}
-		else {
-			foreach (var file in iter) {
-				await ProcessMubin(file);
-			}
-		}
+        await Parallel.ForEachAsync(Directory.EnumerateFiles(path, "*.smubin"), async (file, cancellationToken)
+			=> await ProcessMubin(file));
     }
 
 	private Task ProcessMubin(string path)
