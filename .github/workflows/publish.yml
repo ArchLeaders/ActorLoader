@@ -13,11 +13,13 @@ jobs:
       matrix:
         platform:
           - os: ubuntu-latest
+            os_name: "Ubuntu x64"
             name: Linux
             ext: ""
             arch: tar
             runtime: linux-x64
           - os: ubuntu-latest
+            os_name: "Windows x64"
             name: Windows
             ext: .exe
             arch: zip
@@ -36,9 +38,19 @@ jobs:
       - name: Publish ActorLoader
         run: dotnet publish src/${{ env.proj }}.csproj -r ${{ matrix.platform.runtime }} --configuration Release -p:Version=${{ github.event.release.tag_name }} --output ${{ matrix.platform.name }} --sc false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 
-      - uses: Shopify/upload-to-release@v1.0.1
-        name: Upload artifacts
+      - name: Upload artifacts
+        uses: svenstaro/upload-release-action@v2
         with:
-          name: ${{ env.proj }}-${{ github.event.release.tag_name }}${{ matrix.platform.ext }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ matrix.platform.name }}/${{ env.proj }}${{ matrix.platform.ext }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.platform.name }}/${{ env.proj }}${{ matrix.platform.ext }}
+          asset_name: ${{ env.proj }}-${{ github.event.release.tag_name }}${{ matrix.platform.ext }}
+          tag: ${{ github.ref }}
+          overwrite: true
+          body: ${{ matrix.platform.os_name }}
+
+      # - uses: Shopify/upload-to-release@v1.0.1
+      #   name: Upload artifacts
+      #   with:
+      #     name: ${{ env.proj }}-${{ github.event.release.tag_name }}${{ matrix.platform.ext }}
+      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
+      #     path: ${{ matrix.platform.name }}/${{ env.proj }}${{ matrix.platform.ext }}
