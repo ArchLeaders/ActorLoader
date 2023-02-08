@@ -97,6 +97,7 @@ public class Resource
                 stream.CopyTo(fs);
             }
 
+            Console.WriteLine($"  -> [Copy] -> '{name}'");
             File.Copy(path, copy, true);
         }
     }

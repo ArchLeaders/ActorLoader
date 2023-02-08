@@ -23,4 +23,4 @@ if (args.Length > 0) {
 ModProcessor folder = new(path, auto);
 await folder.Compute();
 
-Console.WriteLine("Task completed succefully!");
+Console.WriteLine("\nTask completed succefully!");
