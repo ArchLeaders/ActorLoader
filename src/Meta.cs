@@ -10,7 +10,7 @@ public static class Meta
          - - - - - - - - - - - - - - - - - - - - - - - - -
          
          
-         ActorLoader.exe <path> [-a|--auto] [-p|--parallel]
+         ActorLoader.exe <path> [-a|--auto]
          
          
          path: The path to the root mod folder (e.g. the
@@ -18,9 +18,5 @@ public static class Meta
          
          auto: Automatically append C to valid actors that
              don't exist in the vanilla game files
-         
-         parallel: Iterate the mod directories in parallel (asynchronously)
-                 Warning: this can cause issues if some actors
-                 weren't previously downloaded
         """;
 }
