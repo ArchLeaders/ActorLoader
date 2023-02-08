@@ -8,6 +8,7 @@ public class ModProcessor
 {
 	private readonly string _path;
 	private readonly bool _auto;
+	private readonly bool _parallel;
 
 	private readonly string _actorsPath;
 	private readonly BymlFile _actorInfo;
@@ -46,24 +47,38 @@ public class ModProcessor
 	private async Task IterateFolders(string path)
 	{
 		await IterateFiles(path);
-		await Parallel.ForEachAsync(Directory.EnumerateDirectories(path), async (folder, cancellationToken) => {
-			await IterateFolders(folder);
-		});
+
+		IEnumerable<string> iter = Directory.EnumerateDirectories(path);
+        if (_parallel) {
+			await Parallel.ForEachAsync(iter, async (folder, cancellationToken) => await IterateFolders(folder));
+		}
+		else {
+			foreach (var folder in iter) {
+				await IterateFolders(folder);
+			}
+		}
 	}
 
-	private Task IterateFiles(string path)
+	private async Task IterateFiles(string path)
 	{
-        return Parallel.ForEachAsync(Directory.EnumerateFiles(path, "*.smubin"), async (file, cancellationToken) => {
-			await ProcessMubin(file);
-        });
+		IEnumerable<string> iter = Directory.EnumerateFiles(path, "*.smubin");
+        if (_parallel) {
+			await Parallel.ForEachAsync(iter, async (file, cancellationToken) => await ProcessMubin(file));
+		}
+		else {
+			foreach (var file in iter) {
+				await ProcessMubin(file);
+			}
+		}
     }
 
 	private async Task ProcessMubin(string path)
 	{
-		Console.WriteLine($"[{DateTime.Now:u}] [Processing] | '{Path.GetFileNameWithoutExtension(path)}'");
+		Console.WriteLine($"[{DateTime.Now:u}] [Processing] -> '{Path.GetFileNameWithoutExtension(path)}'");
+		bool madeChanges = false;
 
 		byte[] mubinData = Yaz0.Decompress(path).ToArray();
-		BymlNode mubin = new BymlFile(mubinData).RootNode;
+		BymlFile mubin = new(mubinData);
 
 		BymlNode? diff = null;
 
@@ -74,7 +89,7 @@ public class ModProcessor
 			diff = Resource.GetVanillaMapEntry(unit, map, type).RootNode;
         }
 
-		foreach (var obj in mubin.Hash["Objs"].Array.Select(x => x.Hash)) {
+		foreach (var obj in mubin.RootNode.Hash["Objs"].Array.Select(x => x.Hash)) {
 			string name = obj["UnitConfigName"].String;
 
 			// Ignore the actor if it's flaged to
@@ -87,9 +102,10 @@ public class ModProcessor
 			if (_auto && _srcActors.Contains(name + 'C')) {
 				name += 'C';
 				obj["UintConfigName"] = new(name);
+				madeChanges = true;
 
-				// Check if it's a vanilla entry
-				if (diff!.Hash["Objs"].Array.Select(x => x.Hash["HashID"].UInt).Contains(obj["HashID"].UInt)) {
+                // Check if it's a vanilla entry
+                if (diff!.Hash["Objs"].Array.Select(x => x.Hash["HashID"].UInt).Contains(obj["HashID"].UInt)) {
 					continue;
 				}
 			}
