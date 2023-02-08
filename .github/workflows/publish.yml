@@ -41,7 +41,7 @@ jobs:
       - name: Upload artifacts
         uses: Shopify/upload-to-release@v1.0.1
         with:
-          repo-token: ${{ secrets.GH_TOKEN }}
+          repo-token: ''
           name: ${{ env.proj }}-${{ github.event.release.tag_name }}${{ matrix.platform.ext }}
           path: ${{ matrix.platform.name }}/${{ env.proj }}${{ matrix.platform.ext }}
           content-type: application/zip
