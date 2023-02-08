@@ -41,7 +41,12 @@ public class ModProcessor
         Console.WriteLine($"\nRunning Cleanup...");
         await Parallel.ForEachAsync(Resource.Staged, async (download, cancellationToken) => await download.Value.Invoke());
 
-		byte[] data = _actorInfo.ToBinary();
+        _actorInfo.RootNode.Hash["Hashes"] = new(_actorInfo.RootNode.Hash["Hashes"].Array.OrderBy(x => x.UInt).ToList());
+        _actorInfo.RootNode.Hash["Actors"] = new(
+			_actorInfo.RootNode.Hash["Actors"].Array.OrderBy(x => Crc32.Compute(x.Hash["name"].String)).ToList()
+		);
+
+        byte[] data = _actorInfo.ToBinary();
 		data = Yaz0.Compress(data.AsSpan(), out Yaz0SafeHandle _).ToArray();
 		File.WriteAllBytes(Path.Combine(_path, "content", "Actor", "ActorInfo.product.sbyml"), data);
     }
