@@ -1,5 +1,4 @@
 ﻿using Nintendo.Byml;
-using System.Text.Json;
 using Yaz0Library;
 
 namespace ActorLoader;
@@ -7,67 +6,36 @@ namespace ActorLoader;
 public class ModFolder
 {
 	private readonly string _path;
-	private readonly bool _auto; // not implemented yet
+	private readonly bool _auto;
 
-	private readonly string _modActorsPath;
-	private readonly List<string> _modActors;
+	private readonly string _actorsPath;
+	private readonly BymlFile _actorInfo;
+	private readonly List<string> _actors;
 
-	private readonly string _cActorsPath;
-	private readonly string[] _cActors;
+	private readonly string _srcActorsPath = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? string.Empty, "Data", "Actors");
+	private readonly BymlFile _srcActorInfo = Resource.GetSrcActorInfo();
+	private readonly string[] _srcActors;
 
-	private readonly string[] _ignoredActors = Array.Empty<string>();
-	private readonly uint[] _vanillaActors;
-
-	private readonly string[] _validSubDirs = {
-		"content", "aoc",
-		"01007EF00011E000", "01007EF00011F001"
-	};
+	private readonly string[] _ignoredActors = Resource.GetIgnoredList();
 
     public ModFolder(string path, bool auto)
 	{
-		bool isDirOk = false;
-		IEnumerable<string?> subDirs = Directory.GetDirectories(path).Select(x => Path.GetFileName(x).ToLower());
-		foreach (var dir in _validSubDirs) {
-			if (subDirs.Contains(dir)) {
-				isDirOk = true;
-				break;
-			}
-		}
-
-		if (!isDirOk) {
-			throw new ArgumentException(
-				$"Invalid mod directory, could not find any of the following directories: '{string.Join(", ", _validSubDirs)}'", nameof(path));
-		}
+		CheckModPath(path);
 		
         _path = path;
 		_auto = auto;
 
-		_modActorsPath = Path.Combine(_path, "content", "Actors");
-		Directory.CreateDirectory(_modActorsPath);
-		_modActors = Directory.EnumerateFiles(_modActorsPath).Select(
-			x => Path.GetFileNameWithoutExtension(x)!).ToList();
-
-		_vanillaActors = Array.Empty<uint>(); // load from resource
-
-        // Load the mod actorinfo
-        string actorInfoPath = Path.Combine(_path, "content", "Actors", "ActorInfo.product.sbyml");
-        Span<byte> actorInfoData = Yaz0.Decompress(actorInfoPath);
-        BymlFile actorInfo = new(actorInfoData.ToArray());
-
-		// Load configs
-		string ignoreListJson = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? string.Empty, "Data", "Ignored.json");
-		if (File.Exists(ignoreListJson)) {
-			_ignoredActors = JsonSerializer.Deserialize<string[]>(File.ReadAllText(ignoreListJson))!;
-        }
-
-		_cActorsPath = "";
-		_cActors = Directory.EnumerateFiles(_cActorsPath).Select(x => Path.GetFileNameWithoutExtension(x)!).ToArray();
+        _actorsPath = Directory.CreateDirectory(Path.Combine(_path, "content", "Actor", "Pack")).FullName;
+        _actorInfo = Resource.GetModActorInfo(Path.Combine(_path, "content", "Actor", "ActorInfo.product.sbyml"));
+        _actors = Directory.EnumerateFiles(_actorsPath).Select(x => Path.GetFileNameWithoutExtension(x)!).ToList();
+		
+		_srcActors = _srcActorInfo.RootNode.Hash.Keys.ToArray();
     }
 
 	public Task Compute()
 	{
 		return IterateFolders(_path);
-	}
+    }
 
 	private async Task IterateFolders(string path)
 	{
@@ -84,26 +52,65 @@ public class ModFolder
         });
     }
 
-	private Task ProcessMubin(string path)
+	private async Task ProcessMubin(string path)
 	{
-		Span<byte> mubinData = Yaz0.Decompress(path);
-		BymlNode mubin = new BymlFile(mubinData.ToArray()).RootNode;
+		byte[] mubinData = Yaz0.Decompress(path).ToArray();
+		BymlNode mubin = new BymlFile(mubinData).RootNode;
 
 		foreach (var obj in mubin.Hash["Objs"].Array.Select(x => x.Hash)) {
-			string name = obj["name"].String;
+			string name = obj["UintConfigName"].String;
 
 			// Ignore the actor if it's flaged
 			// to be ignored or already exists
-			if (_ignoredActors.Contains(name) || _modActors.Contains(name)) {
+			if (_ignoredActors.Contains(name) || _actors.Contains(name)) {
 				continue;
 			}
 
-			if (_cActors.Contains(name)) {
-				File.Copy(Path.Combine(_cActorsPath, name, ".sbactorpack"), Path.Combine(_modActorsPath, name, ".sbactorpack"));
-				// update actor info
+			if (_auto && _srcActors.Contains(name + 'C')) {
+				name += 'C';
+				obj["UintConfigName"] = new(name);
 			}
-		}
 
-		return Task.CompletedTask;
+			if (_srcActors.Contains(name)) {
+				Console.WriteLine($"[{DateTime.Now:u}] [Processing] | '{name}'");
+
+				string cActor = Path.Combine(_srcActorsPath, name, ".sbactorpack");
+				if (!File.Exists(cActor)) {
+					await Resource.DownloadCActor(cActor, name);
+				}
+
+                File.Copy(Path.Combine(_srcActorsPath, name, ".sbactorpack"), Path.Combine(_actorsPath, name, ".sbactorpack"));
+				_actorInfo.RootNode.Hash["Actors"].Array.Add(
+					_srcActorInfo.RootNode.Hash[name]
+				);
+
+				Console.WriteLine($"  -> [{DateTime.Now:u}] [Updated] | '{name}'");
+			}
+
+		}
 	}
+
+	private readonly string[] _validSubDirs = {
+		"content", "aoc",
+		"01007EF00011E000", "01007EF00011F001"
+	};
+
+	private bool CheckModPath(string path)
+	{
+        bool isDirOk = false;
+        IEnumerable<string?> subDirs = Directory.GetDirectories(path).Select(x => Path.GetFileName(x).ToLower());
+        foreach (var dir in _validSubDirs) {
+            if (subDirs.Contains(dir)) {
+                isDirOk = true;
+                break;
+            }
+        }
+
+        if (!isDirOk) {
+            throw new ArgumentException(
+                $"Invalid mod directory, could not find any of the following directories: '{string.Join(", ", _validSubDirs)}'", nameof(path));
+        }
+
+		return isDirOk;
+    }
 }
