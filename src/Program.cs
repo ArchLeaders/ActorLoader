@@ -16,7 +16,7 @@ if (args.Length > 0) {
 }
 
 // Initialize the ModFolder
-ModFolder folder = new(path, auto);
+ModProcessor folder = new(path, auto);
 await folder.Compute();
 
 Console.WriteLine("Task completed succefully!");

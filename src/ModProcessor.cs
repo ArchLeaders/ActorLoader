@@ -4,7 +4,7 @@ using Yaz0Library;
 
 namespace ActorLoader;
 
-public class ModFolder
+public class ModProcessor
 {
 	private readonly string _path;
 	private readonly bool _auto;
@@ -20,7 +20,7 @@ public class ModFolder
 	private readonly string[] _ignoredActors = Resource.GetIgnoredList();
 	private readonly uint[] _vanillaActors = Resource.GetVanillaActorsList();
 
-    public ModFolder(string path, bool auto)
+    public ModProcessor(string path, bool auto)
 	{
 		CheckModPath(path);
 		
