@@ -1,4 +1,5 @@
 ﻿using Nintendo.Byml;
+using System.Buffers.Binary;
 using System.Text.Json;
 using Yaz0Library;
 
@@ -26,6 +27,23 @@ public class Resource
         }
 
         return Array.Empty<string>();
+    }
+
+    public static uint[] GetVanillaActorsList()
+    {
+        Stream stream = typeof(Program).Assembly.GetManifestResourceStream("ActorLoader.Data.ActorInfo.bin")!;
+        Span<byte> buffer = stackalloc byte[4];
+        stream.Read(buffer);
+
+        int count = BinaryPrimitives.ReadInt32LittleEndian(buffer);
+
+        uint[] result = new uint[count];
+        for (int i = 0; i < count; i++) {
+            stream.Read(buffer);
+            result[i] = BinaryPrimitives.ReadUInt32LittleEndian(buffer);
+        }
+
+        return result;
     }
 
     public static BymlFile GetVanillaMapEntry(string unit, string map, string type)
@@ -58,7 +76,8 @@ public class Resource
     public const string ActorBaseUrl = "https://github.com/ArchLeaders/ActorLoader/blob/master/src/Data/Actors/";
     public static async Task DownloadCActor(string path, string name)
     {
-        Console.WriteLine($"  -> [{DateTime.Now:u}] [Downloading] | '{name}'");
+        Console.WriteLine($"  -> [{DateTime.Now:u}] [Downloading] -> '{name}'");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         using FileStream fs = File.Create(path);
         using HttpClient client = new();
