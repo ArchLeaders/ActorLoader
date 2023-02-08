@@ -7,6 +7,7 @@ namespace ActorLoader;
 
 public class Resource
 {
+    public static Dictionary<string, Func<Task>> Staged = new();
     public static Dictionary<string, JsonElement> BcmlSettings { get; } = GetBcmlSettings();
 
     private static Dictionary<string, JsonElement> GetBcmlSettings()
@@ -74,17 +75,29 @@ public class Resource
     }
 
     public const string ActorBaseUrl = "https://github.com/ArchLeaders/ActorLoader/blob/master/src/Data/Actors/";
-    public static async Task DownloadCActor(string path, string name)
+    public static void StageCopy(string name, string path, string copy)
     {
-        Console.WriteLine($"  -> [Downloading] -> '{name}'");
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        if (!Staged.ContainsKey(name)) {
+            Console.WriteLine($"  -> [Staged] -> '{name}'");
+            Staged.Add(name, CopyStaged);
+        }
 
-        using FileStream fs = File.Create(path);
-        using HttpClient client = new();
-        client.DefaultRequestHeaders.Add("actor-loader", typeof(Program).Assembly.GetName().Version!.ToString());
+        async Task CopyStaged()
+        {
+            if (!File.Exists(path)) {
+                Console.WriteLine($"  -> [Downloading] -> '{name}'");
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-        string url = $"{ActorBaseUrl}/{name}.sbactorpack";
-        using Stream stream = await client.GetStreamAsync(url);
-        stream.CopyTo(fs);
+                using FileStream fs = File.Create(path);
+                using HttpClient client = new();
+                client.DefaultRequestHeaders.Add("actor-loader", typeof(Program).Assembly.GetName().Version!.ToString());
+
+                string url = $"{ActorBaseUrl}/{name}.sbactorpack";
+                using Stream stream = await client.GetStreamAsync(url);
+                stream.CopyTo(fs);
+            }
+
+            File.Copy(path, copy, true);
+        }
     }
 }

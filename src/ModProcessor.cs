@@ -38,6 +38,7 @@ public class ModProcessor
 	public async Task Compute()
 	{
 		await IterateFolders(_path);
+		await Parallel.ForEachAsync(Resource.Staged, async (download, cancellationToken) => await download.Value.Invoke());
 
 		byte[] data = _actorInfo.ToBinary();
 		data = Yaz0.Compress(data.AsSpan(), out Yaz0SafeHandle _).ToArray();
@@ -72,7 +73,7 @@ public class ModProcessor
 		}
     }
 
-	private async Task ProcessMubin(string path)
+	private Task ProcessMubin(string path)
 	{
 		Console.WriteLine($"[Processing] -> '{Path.GetFileNameWithoutExtension(path)}'");
 		bool madeChanges = false;
@@ -108,10 +109,9 @@ public class ModProcessor
 			if (_srcActors.Contains(name) && !_vanillaActors.Contains(Crc32.Compute(name))) {
 				string cActor = Path.Combine(_srcActorsPath, $"{name}.sbactorpack");
 				if (!File.Exists(cActor)) {
-					await Resource.DownloadCActor(cActor, name);
 				}
 
-				File.Copy(Path.Combine(_srcActorsPath, $"{name}.sbactorpack"), Path.Combine(_actorsPath, $"{name}.sbactorpack"), true);
+				Resource.StageCopy(name, cActor, Path.Combine(_actorsPath, $"{name}.sbactorpack"));
 				_actorInfo.RootNode.Hash["Actors"].Array.Add(
 					_srcActorInfo.RootNode.Hash[name]
 				);
@@ -126,6 +126,8 @@ public class ModProcessor
 			data = Yaz0.Compress(data.AsSpan(), out Yaz0SafeHandle _).ToArray();
 			File.WriteAllBytes(path, data);
 		}
+
+		return Task.CompletedTask;
 	}
 
 	private readonly string[] _validSubDirs = {
