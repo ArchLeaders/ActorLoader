@@ -1,6 +1,11 @@
 # Actor Loader
 
-Replaces new map actors with a mirror of the vanilla actor with rigid body collision
+Loads the required [`C-Actors`](https://gamebanana.com/mods/307642) (typically actors suffixed with C) by analyzing a mods map unit (mubin) files.
+
+## Setup
+
+- Install the latest [.NET 7.0 runtime](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+- Download the [latest release](https://github.com/ArchLeaders/ActorLoader/releases/latest)
 
 ## Usage
 
