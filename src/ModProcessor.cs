@@ -109,6 +109,12 @@ public class ModProcessor
                 Console.WriteLine($"  -> [{DateTime.Now:u}] [Updated] -> '{name}'");
 			}
 		}
+
+		if (madeChanges) {
+			byte[] data = mubin.ToBinary();
+			data = Yaz0.Compress(data.AsSpan(), out Yaz0SafeHandle _).ToArray();
+			File.WriteAllBytes(path, data);
+		}
 	}
 
 	private readonly string[] _validSubDirs = {
