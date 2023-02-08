@@ -22,7 +22,7 @@ public class Resource
 
     public static string[] GetIgnoredList()
     {
-        string ignoreListJson = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? string.Empty, "Data", "Ignored.json");
+        string ignoreListJson = Path.Combine(AppContext.BaseDirectory, "Data", "Ignored.json");
         if (File.Exists(ignoreListJson)) {
             return JsonSerializer.Deserialize<string[]>(File.ReadAllText(ignoreListJson))!;
         }

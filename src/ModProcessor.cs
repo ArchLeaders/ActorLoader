@@ -13,7 +13,7 @@ public class ModProcessor
 	private readonly BymlFile _actorInfo;
 	private readonly List<string> _actors;
 
-	private readonly string _srcActorsPath = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? string.Empty, "Data", "Actors");
+	private readonly string _srcActorsPath = Path.Combine(AppContext.BaseDirectory, "Data", "Actors");
 	private readonly BymlFile _srcActorInfo = Resource.GetSrcActorInfo();
 	private readonly string[] _srcActors;
 
