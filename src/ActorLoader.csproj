@@ -8,6 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Data\Actors\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Data\ActorInfo.sbyml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BymlLibrary" Version="1.1.4" />
     <PackageReference Include="Yaz0Library" Version="1.1.4" />
   </ItemGroup>
