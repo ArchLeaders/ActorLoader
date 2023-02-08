@@ -1,5 +1,7 @@
 ﻿using ActorLoader;
 
+Console.Title = $"Actor Loader - v{Meta.Version}";
+
 string path = Directory.GetCurrentDirectory();
 bool auto = false;
 
