@@ -16,7 +16,7 @@ public class ModProcessor
 
 	private readonly string _srcActorsPath = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? string.Empty, "Data", "Actors");
 	private readonly BymlFile _srcActorInfo = Resource.GetSrcActorInfo();
-	private readonly List<string> _srcActors;
+	private readonly string[] _srcActors;
 
 	private readonly string[] _ignoredActors = Resource.GetIgnoredList();
 	private readonly uint[] _vanillaActors = Resource.GetVanillaActorsList();
@@ -32,7 +32,7 @@ public class ModProcessor
         _actorInfo = Resource.GetModActorInfo(Path.Combine(_path, "content", "Actor", "ActorInfo.product.sbyml"));
         _actors = Directory.EnumerateFiles(_actorsPath).Select(x => Path.GetFileNameWithoutExtension(x)!).ToList();
 		
-		_srcActors = _srcActorInfo.RootNode.Hash.Keys.ToList();
+		_srcActors = _srcActorInfo.RootNode.Hash.Keys.ToArray();
     }
 
 	public async Task Compute()
@@ -74,43 +74,38 @@ public class ModProcessor
 
 	private async Task ProcessMubin(string path)
 	{
-		Console.WriteLine($"[{DateTime.Now:u}] [Processing] -> '{Path.GetFileNameWithoutExtension(path)}'");
+		Console.WriteLine($"[Processing] -> '{Path.GetFileNameWithoutExtension(path)}'");
 		bool madeChanges = false;
 
 		byte[] mubinData = Yaz0.Decompress(path).ToArray();
 		BymlFile mubin = new(mubinData);
 
-		BymlNode? diff = null;
+		BymlNode diff = null!;
 
         if (_auto) {
             string map = Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(path)!)!);
             string unit = Path.GetFileName(Path.GetDirectoryName(path)!);
-            string type = Path.GetFileName(path).Split('_')[1];
+            string type = Path.GetFileNameWithoutExtension(path).Split('_')[1];
 			diff = Resource.GetVanillaMapEntry(unit, map, type).RootNode;
         }
 
 		foreach (var obj in mubin.RootNode.Hash["Objs"].Array.Select(x => x.Hash)) {
 			string name = obj["UnitConfigName"].String;
 
-			// Ignore the actor if it's flaged to
-			// be ignored, already exists or is a
-			// vanilla actor.
-			if (_vanillaActors.Contains(Crc32.Compute(name)) || _ignoredActors.Contains(name) || _actors.Contains(name)) {
+			// Ignore the actor if it's flaged
+			// to be ignored or already exists
+			if (_ignoredActors.Contains(name) || _actors.Contains(name)) {
 				continue;
 			}
 
-			if (_auto && _srcActors.Contains(name + 'C')) {
-				name += 'C';
-				obj["UintConfigName"] = new(name);
+			if (_auto && _srcActors.Contains(name + 'C') && !diff.Hash["Objs"].Array.Select(x => x.Hash["HashId"].UInt).Contains(obj["HashId"].UInt)) {
+				obj["UnitConfigName"] = new(name += 'C');
 				madeChanges = true;
 
-                // Check if it's a vanilla entry
-                if (diff!.Hash["Objs"].Array.Select(x => x.Hash["HashID"].UInt).Contains(obj["HashID"].UInt)) {
-					continue;
-				}
+                Console.WriteLine($"  -> [Auto-Fixed] -> '{name}@{obj["HashId"].UInt}'");
 			}
 
-			if (_srcActors.Contains(name)) {
+			if (_srcActors.Contains(name) && !_vanillaActors.Contains(Crc32.Compute(name))) {
 				string cActor = Path.Combine(_srcActorsPath, $"{name}.sbactorpack");
 				if (!File.Exists(cActor)) {
 					await Resource.DownloadCActor(cActor, name);
@@ -121,8 +116,8 @@ public class ModProcessor
 					_srcActorInfo.RootNode.Hash[name]
 				);
 
-				_srcActors.Add(name);
-                Console.WriteLine($"  -> [{DateTime.Now:u}] [Updated] -> '{name}'");
+				_actors.Add(name);
+                Console.WriteLine($"  -> [Updated] -> '{name}'");
 			}
 		}
 

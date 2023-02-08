@@ -76,7 +76,7 @@ public class Resource
     public const string ActorBaseUrl = "https://github.com/ArchLeaders/ActorLoader/blob/master/src/Data/Actors/";
     public static async Task DownloadCActor(string path, string name)
     {
-        Console.WriteLine($"  -> [{DateTime.Now:u}] [Downloading] -> '{name}'");
+        Console.WriteLine($"  -> [Downloading] -> '{name}'");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         using FileStream fs = File.Create(path);
