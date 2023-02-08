@@ -37,7 +37,9 @@ public class ModProcessor
 	public async Task Compute()
 	{
 		await IterateFolders(_path);
-		await Parallel.ForEachAsync(Resource.Staged, async (download, cancellationToken) => await download.Value.Invoke());
+
+        Console.WriteLine($"\nRunning Cleanup...");
+        await Parallel.ForEachAsync(Resource.Staged, async (download, cancellationToken) => await download.Value.Invoke());
 
 		byte[] data = _actorInfo.ToBinary();
 		data = Yaz0.Compress(data.AsSpan(), out Yaz0SafeHandle _).ToArray();
@@ -90,18 +92,24 @@ public class ModProcessor
                 Console.WriteLine($"  -> [Auto-Fixed] -> '{name}@{obj["HashId"].UInt}'");
 			}
 
-			if (_srcActors.Contains(name) && !_vanillaActors.Contains(Crc32.Compute(name))) {
+			uint crc = Crc32.Compute(name);
+            if (_srcActors.Contains(name) && !_vanillaActors.Contains(crc)) {
 				string cActor = Path.Combine(_srcActorsPath, $"{name}.sbactorpack");
 				if (!File.Exists(cActor)) {
 				}
 
 				Resource.StageCopy(name, cActor, Path.Combine(_actorsPath, $"{name}.sbactorpack"));
-				_actorInfo.RootNode.Hash["Actors"].Array.Add(
-					_srcActorInfo.RootNode.Hash[name]
-				);
 
+				if (!_actorInfo.RootNode.Hash["Hashes"].Array.Select(x => x.UInt).Contains(crc)) {
+					_actorInfo.RootNode.Hash["Hashes"].Array.Add(new(crc));
+					_actorInfo.RootNode.Hash["Actors"].Array.Add(
+						_srcActorInfo.RootNode.Hash[name]
+					);
+
+					Console.WriteLine($"  -> [Updated] -> '{name}'");
+				}
+				
 				_actors.Add(name);
-                Console.WriteLine($"  -> [Updated] -> '{name}'");
 			}
 		}
 
