@@ -74,7 +74,7 @@ public class Resource
         return new(Yaz0.Decompress(actorInfoPath).ToArray());
     }
 
-    public const string ActorBaseUrl = "https://github.com/ArchLeaders/ActorLoader/blob/master/src/Data/Actors/";
+    public const string ActorBaseUrl = "https://github.com/ArchLeaders/ActorLoader/raw/master/src/Data/Actors/";
     public static void StageCopy(string name, string path, string copy)
     {
         if (!Staged.ContainsKey(name)) {
