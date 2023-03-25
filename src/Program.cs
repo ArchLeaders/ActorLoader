@@ -10,7 +10,7 @@ if (args.Length > 0) {
     path = args[0];
 
     foreach (var arg in args.Where(x => x.StartsWith('-'))) {
-        string argName = arg.ToLower()[1..];
+        string argName = arg.ToLower().Replace("-", string.Empty);
         if (argName == nameof(auto) || argName[0] == nameof(auto)[0]) {
             auto = true;
         }
